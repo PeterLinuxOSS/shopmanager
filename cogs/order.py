@@ -1,10 +1,10 @@
+import asyncio
 import datetime
 from email import message
 
 import nextcord
 from bson import ObjectId
 from nextcord import Colour, Embed, Interaction, Member, TextChannel, User
-from nextcord.components import SelectOption
 from nextcord.ext import commands
 from nextcord.ext.commands import Bot
 from pymongo import ReturnDocument
@@ -52,7 +52,7 @@ class payments(nextcord.ui.Select):
         
         
         
-        ticketdb = db.ticketsdb.find_one_and_update({"channelid":interaction.channel_id} ,[{"$set":{"payment":self.values[0],"legitstatus":"Ineligible","gifterid":config.OWNER_ID}}])
+        ticketdb = await db.ticketsdb.find_one_and_update({"channelid":interaction.channel_id} ,[{"$set":{"payment":self.values[0],"legitstatus":"Ineligible","gifterid":config.OWNER_ID}}])
         if "type" in ticketdb and "ranksmm" == ticketdb["type"]:
             await order.selectrank(self,interaction)
             
@@ -76,7 +76,7 @@ class currentrank(nextcord.ui.Select):
 
     async def callback(self, interaction: nextcord.Interaction):
         current_rank = int(self.values[0])
-        tdb = db.ticketsdb.find_one_and_update({"channelid":interaction.channel_id} ,{"$set":{"currentrank":current_rank}})
+        tdb = await db.ticketsdb.find_one_and_update({"channelid":interaction.channel_id} ,{"$set":{"currentrank":current_rank}})
         
         rankup = tdb["rankup"] if "rankup" in tdb else False 
         derank = tdb["derank"] if "derank" in tdb else False 
@@ -112,7 +112,7 @@ class dreamrank(nextcord.ui.Select):
 
     async def callback(self, interaction: nextcord.Interaction):        
         dream_rank = int(self.values[0])
-        tdb = db.ticketsdb.find_one_and_update({"channelid":interaction.channel_id} ,{"$set":{"dreamrank":dream_rank}},return_document=ReturnDocument.AFTER)
+        tdb = await db.ticketsdb.find_one_and_update({"channelid":interaction.channel_id} ,{"$set":{"dreamrank":dream_rank}},return_document=ReturnDocument.AFTER)
         
         ranks :dict= tdb["ranks"]
         current_rank  = tdb["currentrank"]
@@ -121,7 +121,7 @@ class dreamrank(nextcord.ui.Select):
             if int(rank) > int(current_rank) and int(rank) <= int(dream_rank):
                 total_price += price
                 print(rank)
-        db.ticketsdb.update_one({"channelid":interaction.channel_id} ,{"$set":{"productprice":total_price}})
+        await db.ticketsdb.update_one({"channelid":interaction.channel_id} ,{"$set":{"productprice":total_price}})
         
         await order.paymentshort(self,interaction.channel, tdb["payment"],interaction.message)
 
@@ -142,7 +142,7 @@ class give_product(nextcord.ui.View):
             self.stop()
             
             await interaction.send("  ", ephemeral=True)
-            db.refreshview.delete_one({"channelid":interaction.channel_id, "msgid":interaction.message.id,"view":"give_product"})
+            await db.refreshview.delete_one({"channelid":interaction.channel_id, "msgid":interaction.message.id,"view":"give_product"})
             await order.delivery_product(self,interaction.channel)
             
             
@@ -193,30 +193,30 @@ class ConfirmButton2(nextcord.ui.Button):
         self.label = label
     
     async def callback(self, interaction: nextcord.Interaction):
-        db.refreshview.delete_one({"channelid":interaction.channel_id,"code":"order.paymentshort"})
+        await db.refreshview.delete_one({"channelid":interaction.channel_id,"code":"order.paymentshort"})
         await interaction.response.send_message('Confirming', ephemeral=True)
         value = self.value
         self.disabled = True
         await interaction.message.edit(view=dissableg(self))
-        ticketdb = db.ticketsdb.find_one({"channelid":interaction.channel_id})
+        ticketdb = await db.ticketsdb.find_one({"channelid":interaction.channel_id})
         price = ticketdb["productprice"]
-        paypaldb = db.paymentsdb.find_one({"guildid":interaction.guild_id, "_id": ObjectId(self.value)})
+        paypaldb = await db.paymentsdb.find_one({"guildid":interaction.guild_id, "_id": ObjectId(self.value)})
         go = True
         if ticketdb["type"] == "tf2keys":
-            gooddb = db.goodsdb.find_one({"guilds":interaction.guild.id, "type":"tf2keys"})
+            gooddb = await db.goodsdb.find_one({"guilds":interaction.guild.id, "type":"tf2keys"})
             onhold = gooddb["onhold"]
             if onhold <= 0:
                 onhold = 0
-                db.goodsdb.update_one({'_id': gooddb["_id"]}, {'$set': {'onhold': onhold}})
+                await db.goodsdb.update_one({'_id': gooddb["_id"]}, {'$set': {'onhold': onhold}})
             
             
             if (gooddb["stock"] - onhold) >= int(ticketdb["amount_thing"]):
-                db.goodsdb.update_one({'_id': gooddb["_id"]}, {'$inc': {'onhold': +int(ticketdb["amount_thing"])}})
+                await db.goodsdb.update_one({'_id': gooddb["_id"]}, {'$inc': {'onhold': +int(ticketdb["amount_thing"])}})
             else:
                 await interaction.channel.send(f"Sorry we currently have only {gooddb['stock']} tf2 keys")
                 go = False
         elif ticketdb["type"] == "commendbot":
-            gooddb = db.goodsdb.find_one({"guilds":interaction.guild.id, "type":"commendbot"})
+            gooddb = await db.goodsdb.find_one({"guilds":interaction.guild.id, "type":"commendbot"})
                     
                         
                             
@@ -239,7 +239,7 @@ class ConfirmButton2(nextcord.ui.Button):
                 await interaction.channel.send("Please send link to your steam pofile from what u want to send trade")
                 try:
                     text :nextcord.Message = await self.bot.wait_for('message', check=lambda message: message.channel == interaction.channel and  message.author == interaction.user , timeout=500)
-                except Exception:
+                except asyncio.TimeoutError:
                     msg = await interaction.channel.send("timeout",view=sview(self.bot,ConfirmButton2,None,None,value,self.label))
                     db.refreshview.insert_one({"channelid":interaction.channel_id, "msgid":msg.id,"view":"ConfirmButton2view","values":{type(value):value, type(self.label):self.label}}) 
                 else:
@@ -254,7 +254,7 @@ class ConfirmButton2(nextcord.ui.Button):
                             embed=nextcord.Embed(title="Timeout", description="We didnt get any respond ", color=0xe74c3c)
                             try:
                                 ms: message.Message = await interaction.channel.send(content=" ",embed=embed,view=sview(self.bot,ConfirmButton2,None,None,value,self.label))
-                            except Exception:
+                            except nextcord.HTTPException:
                                 pass
                             else:
                                 db.refreshview.insert_one({"channelid":interaction.channel_id, "msgid":ms.id,"view":"ConfirmButton2view","values":[value, self.label]}) 
@@ -283,7 +283,7 @@ class ConfirmButton2(nextcord.ui.Button):
                     
                     
             else:
-                paydb = db.paymentsdb.find_one({"guildid":interaction.guild_id, "_id":ObjectId(self.value)})
+                paydb = await db.paymentsdb.find_one({"guildid":interaction.guild_id, "_id":ObjectId(self.value)})
                 
                 await interaction.channel.send(paydb["text"])
                 
@@ -307,7 +307,7 @@ class products(nextcord.ui.Select):
         
         
         
-        product = db.productsdb.find_one({"guildid":interaction.guild_id,  "_id":ObjectId(self.values[0])})
+        product = await db.productsdb.find_one({"guildid":interaction.guild_id,  "_id":ObjectId(self.values[0])})
         await order.product_skipper(self,interaction, product,self.subid)
 
                 
@@ -455,13 +455,13 @@ class change_smth(nextcord.ui.Select):
         next = False
         payid = self.value2
         
-        channeldb = db.ticketsdb.find_one({"channelid":interaction.channel_id})
+        channeldb = await db.ticketsdb.find_one({"channelid":interaction.channel_id})
         
         print("here s")
         print(self.values[0])
         if int(self.values[0]) == 1:
             
-            product =db.productsdb.find_one({"_id":ObjectId(channeldb["product_id"])})
+            product =await db.productsdb.find_one({"_id":ObjectId(channeldb["product_id"])})
             question = product["question_price"]
             view = price_qestion(self.bot,question)
             
@@ -483,8 +483,8 @@ class change_smth(nextcord.ui.Select):
                     
                 fixed_price = round_up(float(fixed_price))
                 print(fixed_price)
-                db.ticketsdb.update_one({"channelid":interaction.channel_id} ,[{"$set":{"productprice":fixed_price,"amount_thing":x}}])
-                channeldb = db.ticketsdb.find_one({"channelid":interaction.channel_id})
+                await db.ticketsdb.update_one({"channelid":interaction.channel_id} ,[{"$set":{"productprice":fixed_price,"amount_thing":x}}])
+                channeldb = await db.ticketsdb.find_one({"channelid":interaction.channel_id})
             else:
                 await interaction.send("Try again ",ephemeral=True)
         elif int(self.values[0]) == 5:
@@ -492,7 +492,7 @@ class change_smth(nextcord.ui.Select):
             await order.selectrank(self,interaction)
             
         elif int(self.values[0]) == 2: #change payment method
-            product =db.productsdb.find_one({"_id":ObjectId(channeldb["product_id"])})
+            product =await db.productsdb.find_one({"_id":ObjectId(channeldb["product_id"])})
             
             next = True
             
@@ -541,7 +541,7 @@ class order(commands.Cog):
             await interaction.send(embed=embed)
         else:
             await realchannel.send(embed=embed)
-        tdb = db.ticketsdb.find_one({"channelid":realchannel.id})
+        tdb = await db.ticketsdb.find_one({"channelid":realchannel.id})
         if needprice:
             price = needprice
         else:
@@ -551,7 +551,7 @@ class order(commands.Cog):
         
     async def paymentshort(self,channel:nextcord.TextChannel,payid,msg: nextcord.Message,refresh: nextcord.Message=None):
     
-        channeldb = db.ticketsdb.find_one({"channelid":channel.id})
+        channeldb = await db.ticketsdb.find_one({"channelid":channel.id})
         if not channeldb:
             await channel.delete()
             return
@@ -559,14 +559,14 @@ class order(commands.Cog):
         if channeldb and "category" not in channeldb:
             raise BaseException(f"error-cat - {channeldb}")
         
-        headdb = db.headcategorysdb.find_one({"guildid":channel.guild.id,"headcategory":channeldb["category"]})
+        headdb = await db.headcategorysdb.find_one({"guildid":channel.guild.id,"headcategory":channeldb["category"]})
         
         embed.add_field(name="Category:", value=f'{headdb["emoji"]}・{headdb["label"]}', inline=False)
         if "subcategory" in channeldb:
-            db.subdb = db.subcategoriesdb.find_one({"guildid":channel.guild.id, "headcategory":channeldb["category"], "subcategory":channeldb["subcategory"]})
+            db.subdb = await db.subcategoriesdb.find_one({"guildid":channel.guild.id, "headcategory":channeldb["category"], "subcategory":channeldb["subcategory"]})
             embed.add_field(name="subCategory:", value=f'{db.subdb["emoji"]}・{db.subdb["label"]}', inline=False)
         
-        paydb = db.paymentsdb.find_one({"guildid":channel.guild.id, "_id":ObjectId(payid)})
+        paydb = await db.paymentsdb.find_one({"guildid":channel.guild.id, "_id":ObjectId(payid)})
         
         embed.add_field(name="Product name:", value=channeldb["productname"], inline=False)
         embed.add_field(name="Payment", value=paydb["label"], inline=False)
@@ -599,7 +599,7 @@ class order(commands.Cog):
 
         view = change_smthView(self.bot,selectOption, payid,"Confirm") 
         await msg.edit(embed=embed, view=view)
-        if not db.refreshview.find_one({"channelid":channel.id,"code":"order.paymentshort","msgid":msg.id,}):
+        if not await db.refreshview.find_one({"channelid":channel.id,"code":"order.paymentshort","msgid":msg.id,}):
             
             db.refreshview.insert_one({"channelid":channel.id,"msgid":msg.id,"values":[payid],"code":"order.paymentshort"}) 
         
@@ -610,20 +610,20 @@ class order(commands.Cog):
     async def delivery_product(self,channel:nextcord.TextChannel):
         print(f"delivery_product for {channel.id}")
         
-        ivalue = db.ticketsdb.find_one({"channelid":channel.id})
+        ivalue = await db.ticketsdb.find_one({"channelid":channel.id})
         
         if "commendbot" == ivalue["type"]:
             
             
             amount = int(ivalue["amount_thing"])
-            gooddb = db.goodsdb.find_one({"guilds":channel.guild.id, "type":"commendbot"})
+            gooddb = await db.goodsdb.find_one({"guilds":channel.guild.id, "type":"commendbot"})
             
             channelds = self.bot.get_channel(config.ORDER_LOG_CHANNEL_ID)
             await channelds.send(f"c!transferbot {gooddb['userid']} {amount} {ivalue['userid']} {gooddb['slots']}")
             
             try:
                 msg : nextcord.Message = await self.bot.wait_for('message', check=lambda message: message.channel == channelds and message.author.id != self.bot.user.id , timeout=30)
-            except Exception:
+            except asyncio.TimeoutError:
                 embed = nextcord.Embed(title="Timeout", description="Please ping anybody from support because commendbot is off and i can give u balance!", color=Colour.dark_blue(), timestamp=timestamp,)
                 await channel.send(embed=embed)
 
@@ -647,7 +647,7 @@ class order(commands.Cog):
                 
         elif "tf2keys" == ivalue["type"]:
             amount = int(ivalue["amount_thing"])
-            gooddb = db.goodsdb.find_one({"guilds":channel.guild.id, "type":"tf2keys"})
+            gooddb = await db.goodsdb.find_one({"guilds":channel.guild.id, "type":"tf2keys"})
             embed = nextcord.Embed(title="Please send in to chat your tradelink!", description="You can find your tradelink here: https://steamcommunity.com/sharedfiles/filedetails/?id=354215515", color=Colour.green(), timestamp=timestamp,)
             await channel.send(embed=embed)
             user = self.bot.get_user(ivalue["userid"])
@@ -655,11 +655,11 @@ class order(commands.Cog):
             if msg:
                 checkchannel = self.bot.get_channel(gooddb["channelid"])
                 await checkchannel.send(f"s!send {amount} {msg.content}")
-                db.goodsdb.update_one({'_id': gooddb["_id"]}, {'$inc': {'onhold': -amount}})
-                db.ticketsdb.update_one({'_id': ivalue["_id"]}, {'$set': {'status': "finished"}})
+                await db.goodsdb.update_one({'_id': gooddb["_id"]}, {'$inc': {'onhold': -amount}})
+                await db.ticketsdb.update_one({'_id': ivalue["_id"]}, {'$set': {'status': "finished"}})
                 try:
                     msgs : nextcord.Message = await self.bot.wait_for('message', check=lambda message: message.channel == checkchannel and "send-" in message.content, timeout=20)
-                except Exception:
+                except asyncio.TimeoutError:
                     await channel.send("Error bot not responding!")
                 else:
                     if "sent" in msgs.content:
@@ -668,7 +668,7 @@ class order(commands.Cog):
                         await channel.send("Error please wait for admin")
         elif "keys" == ivalue["type"]:
             key = db.keysdb.find_one_and_delete({"database":ObjectId(ivalue["typeid"]),"subdatabase":ObjectId(ivalue["typeid2"])})
-            keysdbs = db.subkeys.find_one({"database":ObjectId(ivalue["typeid"]),"_id":ObjectId(ivalue["typeid2"])})
+            keysdbs = await db.subkeys.find_one({"database":ObjectId(ivalue["typeid"]),"_id":ObjectId(ivalue["typeid2"])})
             embed = nextcord.Embed(title="Instructions", description=keysdbs["instructions"], color=Colour.gold(), timestamp=timestamp,)
             embed.add_field(name="Your Key", value=f"||{key['key']}||", inline=False)
             await channel.send(embed=embed)
@@ -777,7 +777,7 @@ class order(commands.Cog):
                 
         
         
-        db.ticketsdb.update_one({"channelid":interaction.channel.id} ,{'$set': adds})        
+        await db.ticketsdb.update_one({"channelid":interaction.channel.id} ,{'$set': adds})        
             
     
         await order.send_pay_methods(self,schannel,product,interaction)
@@ -795,9 +795,9 @@ class order(commands.Cog):
         
         if schannel:
             
-            stylesdb = db.embedstylesdb.find_one({"guildid":guild.id, "type":"payments","headcategory":product["headcategory"],"subcategory":schannel})
+            stylesdb = await db.embedstylesdb.find_one({"guildid":guild.id, "type":"payments","headcategory":product["headcategory"],"subcategory":schannel})
         else:
-            stylesdb = db.embedstylesdb.find_one({"guildid":guild.id, "type":"payments","headcategory":product["headcategory"],})
+            stylesdb = await db.embedstylesdb.find_one({"guildid":guild.id, "type":"payments","headcategory":product["headcategory"],})
         if stylesdb:
             
             
@@ -809,7 +809,7 @@ class order(commands.Cog):
             
             
             for payment_id   in paymentss:
-                paydb = db.paymentsdb.find_one({"guildid":guild.id, "_id":ObjectId(payment_id)})
+                paydb = await db.paymentsdb.find_one({"guildid":guild.id, "_id":ObjectId(payment_id)})
                 if paydb:
                 
                     numbers = numbers + 1
@@ -822,7 +822,7 @@ class order(commands.Cog):
                 else:
                     plist = paymentss.copy()
                     plist.remove(payment_id)
-                    db.productsdb.update_one({"_id":product["_id"]}, {"$set":{"payments":plist}})
+                    await db.productsdb.update_one({"_id":product["_id"]}, {"$set":{"payments":plist}})
                     
                 color = stylesdb["color"]
             color = int(hex(color), 0)  

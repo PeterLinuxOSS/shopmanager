@@ -36,7 +36,7 @@ flowchart TB
     S(["Staff"])
 
     subgraph bot ["ShopManager"]
-        SETUP["setup · setup_products · setup_style<br/>catalogue &amp; embed wizards"]
+        SETUP["setup · setup_views · setup_products · setup_style<br/>catalogue &amp; embed wizards"]
         STORE["headcategory · subcategory · ticket<br/>storefront navigation"]
         ORDER["order<br/>payment, delivery, rank boost"]
         TASKS["bot_tasks<br/>expiry &amp; cleanup"]
@@ -64,7 +64,8 @@ simply become unavailable.
 | --- | --- |
 | `main.py` | Entry point: loads cogs, owner reload command |
 | `config.py` | All configuration — credentials, IDs, branding — from the environment |
-| `cogs/setup.py` | Main setup wizard (the largest module) |
+| `cogs/setup.py` | The main setup wizard's cog — slash commands and startup registration |
+| `cogs/setup_views.py` | The 22 select menus `setup.py` drives (split out; not a standalone extension) |
 | `cogs/setup_products.py` | Product creation and pricing, including rank tiers |
 | `cogs/setup_style.py` | Per-menu embed styling |
 | `cogs/headcategory.py`, `cogs/subcategory.py` | Storefront category menus |
@@ -72,7 +73,8 @@ simply become unavailable.
 | `cogs/helpers.py` | Shared prompts, ticket closing, transcripts |
 | `cogs/bot_tasks.py` | Scheduled expiry and cleanup |
 | `cogs/events.py` | Gateway listeners |
-| `utils/` | Database handles, embed builders, shared helpers |
+| `utils/` | Async (motor) database handles, embed builders, shared helpers |
+| `tools/` | Standalone verification scripts |
 
 ## Setup
 
@@ -92,50 +94,46 @@ URIs, the owner and guild IDs, log channels, branding, custom emoji and the
 CS:GO rank tables. The defaults are the original deployment's identifiers and
 serve as documentation; point them at your own guild before running.
 
+## Verification
+
+Two scripts under `tools/` validate the bot without a full deployment:
+
+- `tools/load_check.py` — loads all 12 cogs into a real nextcord Bot and
+  reports the command surface. Catches import-time errors a plain
+  `compileall` cannot, because it actually registers cogs the way `main.py`
+  does at startup.
+- `tools/exercise_db.py` — runs real insert/find/update/delete round trips
+  against MongoDB through `utils.mongodb`, including the specific
+  if/else-into-one-shared-loop cursor pattern used in `cogs/setup.py` (two
+  branches assign the same variable name from `db.productsdb.find(...)`, one
+  loop below consumes whichever ran), plus the pure helpers in
+  `utils/variables.py`.
+
+```bash
+MONGODB_URI='mongodb://127.0.0.1:27017/?directConnection=true' python3 tools/load_check.py
+MONGODB_URI='mongodb://127.0.0.1:27017/shopmanager_test?directConnection=true' python3 tools/exercise_db.py
+```
+
+Neither exercises interactive flows (select menus, modals, button callbacks)
+— those only run against a live Discord interaction, and remain unverified
+beyond code review.
+
 ## Known rough edges
 
 Published honestly rather than polished into something it never was.
 
-- **Blocking database calls in async handlers.** `utils/mongodb.py` uses
-  synchronous `pymongo` while every caller is a coroutine, so each query blocks
-  the event loop. Moving to `motor` is the obvious next step and would touch
-  every cog.
-- **`cogs/setup.py` is 2,000 lines** and holds 23 UI component classes. It wants
-  the same mixin split the CommendBot archive got.
-- **No tests.** The cogs load and the command surface is verified, but the
-  interactive flows have never been exercised automatically.
-- **Error handling is broad.** 51 bare `except:` blocks were narrowed to
-  `except Exception:`, which stops them swallowing `KeyboardInterrupt` and
-  `CancelledError`, but they still swallow a lot.
-
-## What changed when this was published
-
-- Credentials removed and read from `.env` instead: the Discord token and **two**
-  MongoDB URIs, both of which embedded the same account password. All rotated.
-- Branding, log channels, owner/guild IDs, custom emoji and the CS:GO rank
-  tables moved into `config.py`.
-- Star imports replaced with explicit imports throughout, which made ruff's
-  undefined-name check meaningful for the first time. Lint findings went from
-  777 to 5.
-- A 22 MB `nextcord.log` was dropped and the logger dialled back from `DEBUG`
-  to `INFO` — DEBUG on nextcord writes every gateway event to disk, which is
-  what produced it. Level and path are configurable now.
-- ~210 lines of dead and commented-out code removed, plus a duplicated 18-item
-  rank list that appeared four times in `cogs/order.py`.
-
-Bugs found and fixed along the way:
-
-- The embed colour picker never worked. `hex:str ;msg = helpers.waitforrespon(...)`
-  was a bare annotation that never assigned `hex`, so `if hex:` tested the
-  built-in function (always truthy) and wrote that function object to the
-  database — and the coroutine was never awaited, so the confirmation crashed.
-- A rank-boost ticket with neither `rankup` nor `derank` set left `options`
-  unbound and raised `NameError` when the menu was rendered.
-- `eranks` was misaligned against `nranks` by one: an unranked customer
-  displayed as Silver 1, and a Silver 1 customer displayed as the raw text
-  `"s1"`.
-- A `insert_one` document set `"type"` twice, and a walrus binding was assigned
-  and never read.
+- **`eval()` on staff input.** `cogs/order.py` evaluates a staff-entered price
+  formula with the bare `eval()` builtin. Staff-only and not customer-facing,
+  but still arbitrary code execution; a real expression parser would close it.
+  The two `except Exception:` blocks around it were left broad rather than
+  narrowed, since `eval()` can raise almost anything.
+- **One more `except Exception:`** remains around a third-party
+  `steamid.steam64_from_url()` call, which has no documented exception
+  contract to narrow against.
+- **No tests for interactive flows.** The cogs load and the database layer is
+  exercised directly (see Verification), but the select menus, modals and
+  button callbacks that make up almost the entire bot have never run end to
+  end outside of code review.
 
 ## License
 

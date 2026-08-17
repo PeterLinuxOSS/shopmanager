@@ -1,3 +1,4 @@
+import asyncio
 from itertools import permutations
 
 import nextcord
@@ -50,7 +51,7 @@ class productedit(nextcord.ui.Select):
 
             try:
                 text :nextcord.Message = await self.bot.wait_for('message', check=lambda message: message.channel == interaction.channel and  message.author == interaction.user, timeout=180)
-            except Exception:
+            except asyncio.TimeoutError:
                 embed=Embed(title="ERROR | Your Time ran out", description="Cancelled the Operation!", color=0xff0000)
                 if interaction.guild is not None or interaction.guild.icon.url is not None:
                     embed.set_footer(text=interaction.guild , icon_url=interaction.guild.icon.url)
@@ -59,7 +60,7 @@ class productedit(nextcord.ui.Select):
                 product_name = text.content
                 
                                 
-                db.productsdb.update_one({"guildid":interaction.guild_id,  "headcategory": f"category{hcategory}", "_id":productid}, {"$set":{"label":product_name}})              
+                await db.productsdb.update_one({"guildid":interaction.guild_id,  "headcategory": f"category{hcategory}", "_id":productid}, {"$set":{"label":product_name}})              
                 
                 await interaction.send(f"**{config.EMOJI_YES}  Successfuly changed product name!**")
         elif int(value) == 2:
@@ -73,7 +74,7 @@ class productedit(nextcord.ui.Select):
 
             try:
                 text :nextcord.Message = await self.bot.wait_for('message', check=lambda message: message.channel == interaction.channel and  message.author == interaction.user, timeout=180)
-            except Exception:
+            except asyncio.TimeoutError:
                 embed=Embed(title="ERROR | Your Time ran out", description="Cancelled the Operation!", color=0xff0000)
                 if interaction.guild is not None or interaction.guild.icon.url is not None:
                     embed.set_footer(text=interaction.guild , icon_url=interaction.guild.icon.url)
@@ -91,12 +92,12 @@ class productedit(nextcord.ui.Select):
         elif int(value) == 4:
             
             paymethods = db.paymentsdb.find({"guildid":interaction.guild_id})
-            product = db.productsdb.find_one({"guildid":interaction.guild_id, "_id":ObjectId(productid)})
+            product = await db.productsdb.find_one({"guildid":interaction.guild_id, "_id":ObjectId(productid)})
             p_paymethods = product["payments"]
             selectOption = []
             embedvalue = ""
             count = 0
-            for  value_value in paymethods:
+            async for  value_value in paymethods:
                 value_id = str(value_value["_id"])
                 labe = value_value['label']
                 emoji = value_value["emoji"]
@@ -147,7 +148,7 @@ class productedit(nextcord.ui.Select):
             await interaction.send(f" product {product['label']} (`{product['_id']}`) has been deleted{config.EMOJI_YES}! ")
             
         elif int(value) == 5:
-            productsdbs = db.productsdb.find_one({ "_id":ObjectId(productid)})
+            productsdbs = await db.productsdb.find_one({ "_id":ObjectId(productid)})
             
             
             
@@ -158,7 +159,7 @@ class productedit(nextcord.ui.Select):
             else:
                 await interaction.send(f" category {productsdbs['label']} is now Enabled{config.EMOJI_YES}! ")
                 
-            db.productsdb.update_one({"_id":ObjectId(productid)}, {"$set":{"enabled":(not productsdbs["enabled"] )}})
+            await db.productsdb.update_one({"_id":ObjectId(productid)}, {"$set":{"enabled":(not productsdbs["enabled"] )}})
 
 
 class payoptionedit(nextcord.ui.Select):
@@ -190,14 +191,14 @@ class payoptionedit(nextcord.ui.Select):
                 
                 payments.append(valuedb)
                 print(payments)
-        product = db.productsdb.find_one_and_update({"guildid":interaction.guild_id,  "_id":ObjectId(productid)}, {"$set":{"payments":payments}},return_document=ReturnDocument.AFTER)
+        product = await db.productsdb.find_one_and_update({"guildid":interaction.guild_id,  "_id":ObjectId(productid)}, {"$set":{"payments":payments}},return_document=ReturnDocument.AFTER)
         
         p_paymethods = product["payments"]
         selectOption = []
         embedvalue = ""
         count = 0
         paymethods = db.paymentsdb.find({"guildid":interaction.guild_id})
-        for  value_value in paymethods:
+        async for  value_value in paymethods:
             value_id = str(value_value["_id"])
             labe = value_value['label']
             emoji = value_value["emoji"]
@@ -462,7 +463,7 @@ class cateproducts_qestions(nextcord.ui.Modal):
                 
                 try:
                     reaction, user = await self.bot.wait_for("reaction_add", check=lambda reaction,user: reaction.message.id == msg.id and user.id == interaction.user.id, timeout=180)
-                except Exception:
+                except asyncio.TimeoutError:
                     embed=Embed(title="ERROR | Your Time ran out", description="Cancelled the Operation!", color=0xff0000)
                     if interaction.guild is not None or interaction.guild.icon.url is not None:
                         embed.set_footer(text=interaction.guild , icon_url=interaction.guild.icon.url)
@@ -500,7 +501,7 @@ class cateproducts_qestions(nextcord.ui.Modal):
                                 count = 0
                                 
 
-                                for  value_value in paymethod:
+                                async for  value_value in paymethod:
                                     value_id = str(value_value["_id"])
                                     labe = value_value['label']
                                     emoji = value_value["emoji"]
@@ -585,7 +586,7 @@ class payoptionsadd(nextcord.ui.Select):
                 
                 payments.append(valuedb)
                 print(payments)
-        spcategory = db.headcategorysdb.find_one({"guildid":interaction.guild_id, "headcategory":f"category{hcategory}"})
+        spcategory = await db.headcategorysdb.find_one({"guildid":interaction.guild_id, "headcategory":f"category{hcategory}"})
         if spcategory:
             addlist = {"guildid":interaction.guild_id, "headcategory": f"category{hcategory}", "label":product_name, "emoji":product_emoji,"enabled":True, "payments":payments,"type":types,}
             if  "no" not in product_description or "0" not in product_description:
@@ -685,7 +686,7 @@ class setup_products(commands.Cog):
         
         if len(numranks) == 10:
             numranks.sort(reverse=True)
-            ranksdb = db.ranksvrai.find_one({"head":numranks,"type":"mm"})
+            ranksdb = await db.ranksvrai.find_one({"head":numranks,"type":"mm"})
             if ranksdb:
                 aname = "**ateam ranks:**  "
                 bname = "**bteam ranks:**  "

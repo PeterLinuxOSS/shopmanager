@@ -1,4 +1,5 @@
 
+import asyncio
 import nextcord
 from nextcord import Embed, Interaction
 from nextcord.ext import commands
@@ -41,19 +42,19 @@ class setupstylesub(nextcord.ui.Select):
             
 
         
-            styledb = list(db.embedstylesdb.find({"guildid":interaction.guild.id, "type":"submenu","headcategory":hcategory}))
+            styledb = await db.embedstylesdb.find({"guildid":interaction.guild.id, "type":"submenu","headcategory":hcategory}).to_list(length=None)
             if len(styledb) != 0:
                 if int(value) == 2:
                     await interaction.send("Please send your specific color in HEX format **with #**")
                     color, msg = await helpers.waitforrespon(self,interaction.channel,interaction.user,"hex",200)
                     if color:
-                        db.embedstylesdb.update_one({"guildid":interaction.guild_id, "type":"submenu","headcategory":hcategory}, {"$set":{"color":color}})
+                        await db.embedstylesdb.update_one({"guildid":interaction.guild_id, "type":"submenu","headcategory":hcategory}, {"$set":{"color":color}})
                         await interaction.channel.send(content=f"Successfully updated color to {color}")
                 elif int(value) == 3:
                     await interaction.send("Please send what u want to have in description")
                     msg = await helpers.waitforrespon(self,interaction.channel,interaction.user,"msg",300)
                     if msg:
-                        db.embedstylesdb.update_one({"guildid":interaction.guild_id, "type":"submenu","headcategory":hcategory}, {"$set":{"description":msg.content}})
+                        await db.embedstylesdb.update_one({"guildid":interaction.guild_id, "type":"submenu","headcategory":hcategory}, {"$set":{"description":msg.content}})
                         
                         await interaction.send(content=f"Successfully updated description to {msg.content}")
 
@@ -62,7 +63,7 @@ class setupstylesub(nextcord.ui.Select):
                     await interaction.send("Please send what u want to have in footer text")
                     msg = await helpers.waitforrespon(self,interaction.channel,interaction.user,"msg",300)
                     if msg:
-                        db.embedstylesdb.update_one({"guildid":interaction.guild_id, "type":"submenu","headcategory":hcategory}, {"$set":{"footer-text":msg.content}})
+                        await db.embedstylesdb.update_one({"guildid":interaction.guild_id, "type":"submenu","headcategory":hcategory}, {"$set":{"footer-text":msg.content}})
                         
                         await interaction.send(content=f"Successfully updated footer-text to {msg.content}")
                 elif int(value) == 5:
@@ -71,11 +72,11 @@ class setupstylesub(nextcord.ui.Select):
                     if text:
                         
                         if 'https://' in text.content  or 'http://' in text.content:
-                            db.embedstylesdb.update_one({"guildid":interaction.guild_id, "type":"submenu","headcategory":hcategory}, {"$set":{"image":text.content}})
+                            await db.embedstylesdb.update_one({"guildid":interaction.guild_id, "type":"submenu","headcategory":hcategory}, {"$set":{"image":text.content}})
                             
                             await interaction.send(content=f"Successfully updated image to {text.content}")
                         elif text.content.startswith("0") or text.content.startswith("no"):
-                            db.embedstylesdb.update_one({"guildid":interaction.guild_id, "type":"submenu","headcategory":hcategory}, {"$unset":{"image":""}})
+                            await db.embedstylesdb.update_one({"guildid":interaction.guild_id, "type":"submenu","headcategory":hcategory}, {"$unset":{"image":""}})
                             
                             await interaction.send(content="Successfully removed image.")
                         
@@ -90,12 +91,12 @@ class setupstylesub(nextcord.ui.Select):
                     if text:
                         
                         if 'https://' in text.content  or 'http://' in text.content:
-                            db.embedstylesdb.update_one({"guildid":interaction.guild_id, "type":"submenu","headcategory":hcategory}, {"$set":{"icon":text.content}})
+                            await db.embedstylesdb.update_one({"guildid":interaction.guild_id, "type":"submenu","headcategory":hcategory}, {"$set":{"icon":text.content}})
                             
                             await interaction.send(content=f"Successfully updated thumbnail icon to {text.content}")
                         elif text.content.startswith("0") or text.content.startswith("no"):
 
-                            db.embedstylesdb.update_one({"guildid":interaction.guild_id, "type":"submenu","headcategory":hcategory}, {"$unset":{"icon":""}})
+                            await db.embedstylesdb.update_one({"guildid":interaction.guild_id, "type":"submenu","headcategory":hcategory}, {"$unset":{"icon":""}})
                             await interaction.send(content="Successfully removed thumbnail icon.")
                         
                         else:
@@ -107,7 +108,7 @@ class setupstylesub(nextcord.ui.Select):
                     await interaction.send("Please send what u want to have in title")
                     text = await helpers.waitforrespon(self,interaction.channel,interaction.user,"msg",300)
                     if text:
-                        db.embedstylesdb.update_one({"guildid":interaction.guild_id, "type":"submenu","headcategory":hcategory}, {"$set":{"title":text.content}})
+                        await db.embedstylesdb.update_one({"guildid":interaction.guild_id, "type":"submenu","headcategory":hcategory}, {"$set":{"title":text.content}})
                         await interaction.send(content=f"Successfully updated title to {text.content}")
 
                 elif int(value) == 8:
@@ -116,11 +117,11 @@ class setupstylesub(nextcord.ui.Select):
                     if text:
                         
                         if 'https://' in text.content  or 'http://' in text.content:
-                            db.embedstylesdb.update_one({"guildid":interaction.guild_id, "type":"submenu","headcategory":hcategory}, {"$set":{"footer-icon":text.content}})
+                            await db.embedstylesdb.update_one({"guildid":interaction.guild_id, "type":"submenu","headcategory":hcategory}, {"$set":{"footer-icon":text.content}})
                             
                             await interaction.send(content=f"Successfully updated footer icon to {text.content}")
                         elif text.content.startswith("0") or text.content.startswith("no"):
-                            db.embedstylesdb.update_one({"guildid":interaction.guild_id, "type":"submenu","headcategory":hcategory}, {"$unset":{"footer-icon":""}})
+                            await db.embedstylesdb.update_one({"guildid":interaction.guild_id, "type":"submenu","headcategory":hcategory}, {"$unset":{"footer-icon":""}})
                             
                             await interaction.send(content="Successfully removed footer icon.")
                         
@@ -204,7 +205,7 @@ class setupstyleproducts(nextcord.ui.Select):
 
         else:
             print(hcategory, scategory)
-            styledb = db.embedstylesdb.find_one({"guildid":interaction.guild.id, "type":"productsmenu","headcategory":hcategory,"subcategory":scategory})
+            styledb = await db.embedstylesdb.find_one({"guildid":interaction.guild.id, "type":"productsmenu","headcategory":hcategory,"subcategory":scategory})
             print(styledb)
             if styledb :
                 if int(value) == 2:
@@ -216,7 +217,7 @@ class setupstyleproducts(nextcord.ui.Select):
                     # pattern used everywhere else for the "hex" check.
                     color, msg = await helpers.waitforrespon(self,interaction.channel,interaction.user,"hex",180)
                     if color:
-                        db.embedstylesdb.update_one({"_id":styledb["_id"]}, {"$set":{"color":color}})
+                        await db.embedstylesdb.update_one({"_id":styledb["_id"]}, {"$set":{"color":color}})
 
                         await interaction.send(content=f"Successfully updated color to {color}")
                         
@@ -224,13 +225,13 @@ class setupstyleproducts(nextcord.ui.Select):
                     await interaction.send("Please send what u want to have in description")
                     try:
                         text :nextcord.Message = await self.bot.wait_for('message', check=lambda message: message.channel == interaction.channel and  message.author == interaction.user, timeout=180)
-                    except Exception:
+                    except asyncio.TimeoutError:
                         embed=Embed(title="ERROR | Your Time ran out", description="Cancelled the Operation!", color=0xff0000)
                         if interaction.guild is not None or interaction.guild.icon.url is not None:
                             embed.set_footer(text=interaction.guild , icon_url=interaction.guild.icon.url)
                             await interaction.edit_original_message(embed=embed)
                     else:
-                        db.embedstylesdb.update_one({"_id":styledb["_id"]}, {"$set":{"description":text.content}})
+                        await db.embedstylesdb.update_one({"_id":styledb["_id"]}, {"$set":{"description":text.content}})
                         
                         await interaction.send(content=f"Successfully updated description to {text.content}")
 
@@ -239,20 +240,20 @@ class setupstyleproducts(nextcord.ui.Select):
                     await interaction.send("Please send what u want to have in footer text")
                     try:
                         text :nextcord.Message = await self.bot.wait_for('message', check=lambda message: message.channel == interaction.channel and  message.author == interaction.user, timeout=180)
-                    except Exception:
+                    except asyncio.TimeoutError:
                         embed=Embed(title="ERROR | Your Time ran out", description="Cancelled the Operation!", color=0xff0000)
                         if interaction.guild is not None or interaction.guild.icon.url is not None:
                             embed.set_footer(text=interaction.guild , icon_url=interaction.guild.icon.url)
                             await interaction.edit_original_message(embed=embed)
                     else:
-                        db.embedstylesdb.update_one({"_id":styledb["_id"]}, {"$set":{"footer-text":text.content}})
+                        await db.embedstylesdb.update_one({"_id":styledb["_id"]}, {"$set":{"footer-text":text.content}})
                         
                         await interaction.send(content=f"Successfully updated footer-text to {text.content}")
                 elif int(value) == 5:
                     await interaction.send("Please send link for your image(if you want remove image just send `0` or `no`)")
                     try:
                         text :nextcord.Message = await self.bot.wait_for('message', check=lambda message: message.channel == interaction.channel and  message.author == interaction.user, timeout=180)
-                    except Exception:
+                    except asyncio.TimeoutError:
                         embed=Embed(title="ERROR | Your Time ran out", description="Cancelled the Operation!", color=0xff0000)
                         if interaction.guild is not None or interaction.guild.icon.url is not None:
                             embed.set_footer(text=interaction.guild , icon_url=interaction.guild.icon.url)
@@ -260,11 +261,11 @@ class setupstyleproducts(nextcord.ui.Select):
                     else:
                         
                         if 'https://' in text.content  or 'http://' in text.content:
-                            db.embedstylesdb.update_one({"_id":styledb["_id"]}, {"$set":{"image":text.content}})
+                            await db.embedstylesdb.update_one({"_id":styledb["_id"]}, {"$set":{"image":text.content}})
                             
                             await interaction.send(content=f"Successfully updated image to {text.content}")
                         elif text.content.startswith("0") or text.content.startswith("no"):
-                            db.embedstylesdb.update_one({"_id":styledb["_id"]}, {"$unset":{"image":""}})
+                            await db.embedstylesdb.update_one({"_id":styledb["_id"]}, {"$unset":{"image":""}})
                             
                             await interaction.send(content="Successfully removed image.")
                         
@@ -277,7 +278,7 @@ class setupstyleproducts(nextcord.ui.Select):
                     await interaction.send("Please send link for your thumbnail icon (if you want remove image just send `0` or `no`)")
                     try:
                         text :nextcord.Message = await self.bot.wait_for('message', check=lambda message: message.channel == interaction.channel and  message.author == interaction.user, timeout=180)
-                    except Exception:
+                    except asyncio.TimeoutError:
                         embed=Embed(title="ERROR | Your Time ran out", description="Cancelled the Operation!", color=0xff0000)
                         if interaction.guild is not None or interaction.guild.icon.url is not None:
                             embed.set_footer(text=interaction.guild , icon_url=interaction.guild.icon.url)
@@ -285,12 +286,12 @@ class setupstyleproducts(nextcord.ui.Select):
                     else:
                         
                         if 'https://' in text.content  or 'http://' in text.content:
-                            db.embedstylesdb.update_one({"_id":styledb["_id"]}, {"$set":{"icon":text.content}})
+                            await db.embedstylesdb.update_one({"_id":styledb["_id"]}, {"$set":{"icon":text.content}})
                             
                             await interaction.send(content=f"Successfully updated thumbnail icon to {text.content}")
                         elif text.content.startswith("0") or text.content.startswith("no"):
 
-                            db.embedstylesdb.update_one({"_id":styledb["_id"]}, {"$unset":{"icon":""}})
+                            await db.embedstylesdb.update_one({"_id":styledb["_id"]}, {"$unset":{"icon":""}})
                             await interaction.send(content="Successfully removed thumbnail icon.")
                         
                         else:
@@ -302,20 +303,20 @@ class setupstyleproducts(nextcord.ui.Select):
                     await interaction.send("Please send what u want to have in title")
                     try:
                         text :nextcord.Message = await self.bot.wait_for('message', check=lambda message: message.channel == interaction.channel and  message.author == interaction.user, timeout=180)
-                    except Exception:
+                    except asyncio.TimeoutError:
                         embed=Embed(title="ERROR | Your Time ran out", description="Cancelled the Operation!", color=0xff0000)
                         if interaction.guild is not None or interaction.guild.icon.url is not None:
                             embed.set_footer(text=interaction.guild , icon_url=interaction.guild.icon.url)
                             await interaction.edit_original_message(embed=embed)
                     else:
-                        db.embedstylesdb.update_one({"_id":styledb["_id"]}, {"$set":{"title":text.content}})
+                        await db.embedstylesdb.update_one({"_id":styledb["_id"]}, {"$set":{"title":text.content}})
                         await interaction.send(content=f"Successfully updated title to {text.content}")
 
                 elif int(value) == 8:
                     await interaction.send("Please send link for your footer  icon (if you want remove image just send `0` or `no`)")
                     try:
                         text :nextcord.Message = await self.bot.wait_for('message', check=lambda message: message.channel == interaction.channel and  message.author == interaction.user, timeout=180)
-                    except Exception:
+                    except asyncio.TimeoutError:
                         embed=Embed(title="ERROR | Your Time ran out", description="Cancelled the Operation!", color=0xff0000)
                         if interaction.guild is not None or interaction.guild.icon.url is not None:
                             embed.set_footer(text=interaction.guild , icon_url=interaction.guild.icon.url)
@@ -323,11 +324,11 @@ class setupstyleproducts(nextcord.ui.Select):
                     else:
                         
                         if 'https://' in text.content  or 'http://' in text.content:
-                            db.embedstylesdb.update_one({"_id":styledb["_id"]}, {"$set":{"footer-icon":text.content}})
+                            await db.embedstylesdb.update_one({"_id":styledb["_id"]}, {"$set":{"footer-icon":text.content}})
                             
                             await interaction.send(content=f"Successfully updated footer icon to {text.content}")
                         elif text.content.startswith("0") or text.content.startswith("no"):
-                            db.embedstylesdb.update_one({"_id":styledb["_id"]}, {"$unset":{"footer-icon":""}})
+                            await db.embedstylesdb.update_one({"_id":styledb["_id"]}, {"$unset":{"footer-icon":""}})
                             
                             await interaction.send(content="Successfully removed footer icon.")
                         

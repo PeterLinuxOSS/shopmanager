@@ -1,3 +1,4 @@
+import asyncio
 import config
 import datetime
 
@@ -34,7 +35,7 @@ class events(commands.Cog):
         for channel in guild.channels:  
             try:
                 await channel.send("\u200b", delete_after=1)
-            except Exception:
+            except nextcord.HTTPException:
                 pass
             else:
                 invchannel = channel
@@ -57,7 +58,7 @@ class events(commands.Cog):
             await headcategorycs.refreshlables(self,guild.id)
         guild = self.bot.get_guild(config.STAFF_GUILD_ID)
         viewsdb = db.refreshview.find({})
-        for viewdb in viewsdb:
+        async for viewdb in viewsdb:
             
                 
             if  "values" in viewdb:
@@ -65,8 +66,8 @@ class events(commands.Cog):
                 if channel:
                     try:
                         msg = await channel.fetch_message(viewdb["msgid"])
-                    except Exception:
-                        db.refreshview.delete_one({"msgid":viewdb["msgid"]})
+                    except nextcord.HTTPException:
+                        await db.refreshview.delete_one({"msgid":viewdb["msgid"]})
                     else:
                         if "values" in viewdb and "code" in viewdb:
                             print(viewdb)
@@ -76,7 +77,7 @@ class events(commands.Cog):
                             print(*values)
                             await code(self,channel,*values, msg,msg)
                 else:
-                    db.refreshview.delete_many({"channelid":viewdb["channelid"]})
+                    await db.refreshview.delete_many({"channelid":viewdb["channelid"]})
         if not bot_tasks.checktf.is_running():
             bot_tasks.checktf.start(self)
             
@@ -86,13 +87,13 @@ class events(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self,msg: nextcord.Message):
         
-        glbdb = list(db.globalchecker.find({"chchannelid":msg.channel.id}).sort('_id', pymongo.DESCENDING))
+        glbdb = await db.globalchecker.find({"chchannelid":msg.channel.id}).sort('_id', pymongo.DESCENDING).to_list(length=None)
 
         if len(glbdb) != 0:
             for chdb in glbdb:
                 if chdb["template"] == "steam":
                     if str(chdb["steamid"]) in msg.content:
-                        ticketdb = db.ticketsdb.find_one({"channelid":chdb["channelid"]})
+                        ticketdb = await db.ticketsdb.find_one({"channelid":chdb["channelid"]})
                         if ticketdb:
                             userchannel = self.bot.get_channel(chdb["channelid"])
                             variables = msg.content.split("-")
@@ -102,7 +103,7 @@ class events(commands.Cog):
                             
                             try:
                                 text :nextcord.Message = await self.bot.wait_for('message', check=lambda message: message.channel == msg.channel and  message.author == msg.author and offerid in message.content, timeout=60)
-                            except Exception:
+                            except asyncio.TimeoutError:
                                 pass #missing error 
                             else:
                                 lines = text.content.split("\n")
@@ -126,36 +127,36 @@ class events(commands.Cog):
                                             payid = str(chdb["paymentid"])
                                             msg =await userchannel.send(f"I can only accept {chdb['appid']} items not items from other apps!", view=sview(self.bot,ConfirmButton2, None,None,payid, "Retry"))
                                             db.refreshview.insert_one({"channelid":userchannel.id, "msgid":msg.id,"view":"ConfirmButton2view","values":[payid, "Retry"]}) 
-                                            db.globalchecker.delete_one({"_id":ObjectId(chdb["_id"])})
+                                            await db.globalchecker.delete_one({"_id":ObjectId(chdb["_id"])})
                                     else:
                                         process = True
                                     if process:
                                         await msg.channel.send(f"s!accept {offerid}")
                                         try:
                                             text :nextcord.Message = await self.bot.wait_for('message', check=lambda message: message.channel == msg.channel and  message.author == msg.author and offerid in message.content , timeout=60)
-                                        except Exception:
+                                        except asyncio.TimeoutError:
                                             await userchannel.send("Please wait for support(erorr: didnt get accept message form bot )")
                                         else:
                                             if "Status: ACCEPTED" in text.content:
-                                                db.globalchecker.delete_one({"_id":ObjectId(chdb["_id"])})
+                                                await db.globalchecker.delete_one({"_id":ObjectId(chdb["_id"])})
                                                 await userchannel.send("TradeOffer Accepted")
                                                 await order.delivery_product(self,userchannel)
                                                 
                                             else:
                                                 msg = await userchannel.send("We cant accpet your trade!", view=give_product(self.bot)) 
                                                 db.refreshview.insert_one({"channelid":userchannel.id, "msgid":msg.id,"view":"give_product"}) 
-                                                db.globalchecker.delete_one({"_id":ObjectId(chdb["_id"])})
+                                                await db.globalchecker.delete_one({"_id":ObjectId(chdb["_id"])})
                                         
                                 else:
                                     needtosend = rpice -realprice
                                     await userchannel.send(f"You didnt send enoguht items because items price is {realprice}€(with frees) and real price is {rpice}€, select if you want send next {needtosend}€(without fees) or ll send again trade offer ", view=None) # add here view bt1: send more, bt2: Cancel and do again
                                     
-                                    db.globalchecker.delete_one({"_id":ObjectId(chdb["_id"])})
+                                    await db.globalchecker.delete_one({"_id":ObjectId(chdb["_id"])})
                             print(chdb)
                         break    
                 elif chdb["template"] == "onlytf2":
                     if str(chdb["steamid"]) in msg.content:
-                        ticketdb = db.ticketsdb.find_one({"channelid":chdb["channelid"]})
+                        ticketdb = await db.ticketsdb.find_one({"channelid":chdb["channelid"]})
                         if ticketdb:
                             userchannel = self.bot.get_channel(chdb["channelid"])
                             variables = msg.content.split("-")
@@ -165,11 +166,11 @@ class events(commands.Cog):
                             
                             try:
                                 text :nextcord.Message = await self.bot.wait_for('message', check=lambda message: message.channel == msg.channel and  message.author == msg.author and offerid in message.content, timeout=60)
-                            except Exception:
+                            except asyncio.TimeoutError:
                                 embed = nextcord.Embed(title="Error(Trade-Bot not responding)", description="Please ping support bot cant automatic check trade", color=Colour.red(), timestamp=timestamp,)
                                 msg = await userchannel.send(embed=embed,view=give_product(self.bot))
                                 db.refreshview.insert_one({"channelid":userchannel.id, "msgid":msg.id,"view":"give_product"}) 
-                                db.globalchecker.delete_one({"_id":ObjectId(chdb["_id"])})
+                                await db.globalchecker.delete_one({"_id":ObjectId(chdb["_id"])})
                                 
                             else:
                                 lines = text.content.split("\n")
@@ -198,32 +199,32 @@ class events(commands.Cog):
                                     embed = nextcord.Embed(title="Not enought tf2 keys", description=f"you sent {quantity} tf2 keys but we need {need_tf2}", color=Colour.dark_red(), timestamp=timestamp,)
                                     msg =await userchannel.send(f"I can only accept {chdb['appid']} items not items from other apps!", view=sview(self.bot,ConfirmButton2, None,None,payid, "Retry"))
                                     db.refreshview.insert_one({"channelid":userchannel.id, "msgid":msg.id,"view":"ConfirmButton2view","values":[payid, "Retry"]}) 
-                                    db.globalchecker.delete_one({"_id":ObjectId(chdb["_id"])})
+                                    await db.globalchecker.delete_one({"_id":ObjectId(chdb["_id"])})
                                     
                                 else:
 
                                     await msg.channel.send(f"s!accept {offerid}")
                                     try:
                                         text :nextcord.Message = await self.bot.wait_for('message', check=lambda message: message.channel == msg.channel and  message.author == msg.author and offerid in message.content , timeout=60)
-                                    except Exception:
+                                    except asyncio.TimeoutError:
                                         await userchannel.send("Please wait for support(erorr: didnt get accept message form bot )")
                                     else:
                                         if "Status: ACCEPTED" in text.content:
-                                            db.globalchecker.delete_one({"_id":ObjectId(chdb["_id"])})
+                                            await db.globalchecker.delete_one({"_id":ObjectId(chdb["_id"])})
                                             await userchannel.send("TradeOffer Accepted")
                                             await order.delivery_product(self,userchannel)
                                             
                                         else:
                                             msg = await userchannel.send("We cant accpet your trade!", view=give_product(self.bot)) 
                                             db.refreshview.insert_one({"channelid":userchannel.id, "msgid":msg.id,"view":"give_product"}) 
-                                            db.globalchecker.delete_one({"_id":ObjectId(chdb["_id"])})
+                                            await db.globalchecker.delete_one({"_id":ObjectId(chdb["_id"])})
 
                         break      
                         
                         
                 elif chdb["template"] == "tf2":
                     if str(chdb["steamid"]) in msg.content:
-                        ticketdb = db.ticketsdb.find_one({"channelid":chdb["channelid"]})
+                        ticketdb = await db.ticketsdb.find_one({"channelid":chdb["channelid"]})
                         if ticketdb:
                             userchannel = self.bot.get_channel(chdb["channelid"])
                             variables = msg.content.split("-")
@@ -233,7 +234,7 @@ class events(commands.Cog):
                             
                             try:
                                 text :nextcord.Message = await self.bot.wait_for('message', check=lambda message: message.channel == msg.channel and  message.author == msg.author and offerid in message.content, timeout=60)
-                            except Exception:
+                            except asyncio.TimeoutError:
                                 pass #missing error 
                             else:
                                 lines = text.content.split("\n")
@@ -273,30 +274,30 @@ class events(commands.Cog):
                                         embed = nextcord.Embed(title="Not enought items/keys", description=f"you sent items in total price {tradeprice}€(without fees) but we need {realprice}€(without fees)", color=Colour.dark_red(), timestamp=timestamp,)
                                         msg =await userchannel.send(embed=embed, view=sview(self.bot,ConfirmButton2, None,None,payid, "Retry"))
                                         db.refreshview.insert_one({"channelid":userchannel.id, "msgid":msg.id,"view":"ConfirmButton2view","values":[payid, "Retry"]}) 
-                                        db.globalchecker.delete_one({"_id":ObjectId(chdb["_id"])})
+                                        await db.globalchecker.delete_one({"_id":ObjectId(chdb["_id"])})
                                         
                                     else:
 
                                         await msg.channel.send(f"s!accept {offerid}")
                                         try:
                                             text :nextcord.Message = await self.bot.wait_for('message', check=lambda message: message.channel == msg.channel and  message.author == msg.author and offerid in message.content , timeout=60)
-                                        except Exception:
+                                        except asyncio.TimeoutError:
                                             await userchannel.send("Please wait for support(erorr: didnt get accept message form bot )")
                                         else:
                                             if "Status: ACCEPTED" in text.content:
-                                                db.globalchecker.delete_one({"_id":ObjectId(chdb["_id"])})
+                                                await db.globalchecker.delete_one({"_id":ObjectId(chdb["_id"])})
                                                 await userchannel.send("TradeOffer Accepted")
                                                 await order.delivery_product(self,userchannel)
                                                 
                                             else:
                                                 msg = await userchannel.send("We cant accpet your trade!", view=give_product(self.bot)) 
                                                 db.refreshview.insert_one({"channelid":userchannel.id, "msgid":msg.id,"view":"give_product"}) 
-                                                db.globalchecker.delete_one({"_id":ObjectId(chdb["_id"])})
+                                                await db.globalchecker.delete_one({"_id":ObjectId(chdb["_id"])})
                                 else:
                                     embed = nextcord.Embed(title="Incorrect item app id ", description=f"I can only accept {chdb['appid']} items(+tf2 keys) not items from other apps!", color=Colour.dark_red(), timestamp=timestamp,)
                                     await userchannel.send(embed=embed,view=sview(self.bot,ConfirmButton2, None,None,payid, "Retry"))
                                     db.refreshview.insert_one({"channelid":userchannel.id, "msgid":msg.id,"view":"ConfirmButton2view","values":[payid, "Retry"]}) 
-                                    db.globalchecker.delete_one({"_id":ObjectId(chdb["_id"])})
+                                    await db.globalchecker.delete_one({"_id":ObjectId(chdb["_id"])})
 
                         break     
                         
@@ -336,9 +337,9 @@ class events(commands.Cog):
                         
             
                     if verified:
-                        db.globalchecker.delete_one({"_id":ObjectId(chdb["_id"])})
+                        await db.globalchecker.delete_one({"_id":ObjectId(chdb["_id"])})
                         userchannel = self.bot.get_channel(chdb["channelid"])
-                        ticketdb = db.ticketsdb.find_one({"channelid":chdb["channelid"]})
+                        ticketdb = await db.ticketsdb.find_one({"channelid":chdb["channelid"]})
                         
                         paystatuscheck = ticketdb["legitstatus"]    
                         price = chdb["price"]
@@ -364,17 +365,17 @@ class events(commands.Cog):
                             await userchannel.send(embed=embed, view=paypal_again(verify,checker,msg.channel,needprice,link)) 
                         break
         if msg.content.startswith("tfcheck-") and msg.author.bot or msg.content.startswith("tfcheck-") and msg.author.id == self.bot.owner_id:
-            goodstf =db.goodsdb.find_one({"type":"tf2keys","channelid":msg.channel.id})  
+            goodstf =await db.goodsdb.find_one({"type":"tf2keys","channelid":msg.channel.id})  
             if goodstf:
                 stock = int(msg.content.split("-")[1])
                 print(stock)
-                db.goodsdb.update_one({'_id': goodstf["_id"]}, {'$set': {'stock': stock}})
+                await db.goodsdb.update_one({'_id': goodstf["_id"]}, {'$set': {'stock': stock}})
         if msg.guild is not None:
             if msg.channel.category is not None:
                 
                 
-                if db.timedb.find_one({"channelid": msg.channel.id, "userid":msg.author.id}):
-                    db.timedb.delete_one({"channelid": msg.channel.id})
+                if await db.timedb.find_one({"channelid": msg.channel.id, "userid":msg.author.id}):
+                    await db.timedb.delete_one({"channelid": msg.channel.id})
                     await msg.reply("Nice!")
 
 

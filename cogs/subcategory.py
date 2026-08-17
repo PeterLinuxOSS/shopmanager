@@ -29,12 +29,12 @@ class subcategory(nextcord.ui.Select):
                 
             
         
-        channeldb = db.ticketsdb.find_one({"channelid":interaction.channel_id})
+        channeldb = await db.ticketsdb.find_one({"channelid":interaction.channel_id})
         subhead =    channeldb["category"]
         
         print(subhead)
         print(self.values[0])
-        labe = db.subcategoriesdb.find_one({"guildid":interaction.guild_id, "headcategory":subhead, "subcategory":subid})
+        labe = await db.subcategoriesdb.find_one({"guildid":interaction.guild_id, "headcategory":subhead, "subcategory":subid})
         print(labe)
         if "run" in labe:
             if labe["run"] == "products":
@@ -48,7 +48,7 @@ class subcategory(nextcord.ui.Select):
                     
                     selectOption = []
                     numbers = 0
-                    stylesdb = db.embedstylesdb.find_one({"guildid":interaction.guild_id, "type":"productsmenu","headcategory":channeldb["category"], "subcategory":subid})
+                    stylesdb = await db.embedstylesdb.find_one({"guildid":interaction.guild_id, "type":"productsmenu","headcategory":channeldb["category"], "subcategory":subid})
                     if stylesdb :
 
                         
@@ -57,7 +57,7 @@ class subcategory(nextcord.ui.Select):
                         else:
                             embedvalue = ""
 
-                        for  value_value in productsdbs:
+                        async for  value_value in productsdbs:
                                 value_id = str(value_value["_id"])
                                 print(value_id)
                                 numbers = numbers + 1
@@ -119,7 +119,7 @@ class subcategory(nextcord.ui.Select):
             elif labe["run"] == "ticket":
                 
                 
-                headdb = db.headcategorysdb.find_one({"guildid":guild.id,"headcategory":channeldb["category"]})
+                headdb = await db.headcategorysdb.find_one({"guildid":guild.id,"headcategory":channeldb["category"]})
                 await ticketcs.ticket(self=self,headcategorydb=headdb,channel=interaction,subcategorydb=labe)
                 
             else:

@@ -40,7 +40,7 @@ class bot_tasks(commands.Cog):
     
     @tasks.loop(hours=5) 
     async def checktf(self):
-        goodstf =list(db.goodsdb.find({"type":"tf2keys"}))
+        goodstf =await db.goodsdb.find({"type":"tf2keys"}).to_list(length=None)
         for tfgood in goodstf:
             channel = self.bot.get_channel(tfgood["channelid"])
             await channel.send("s!tfcheck")
@@ -49,13 +49,13 @@ class bot_tasks(commands.Cog):
     @tasks.loop(hours=1) 
     async def autodelete(self):
         datetime_utc = datetime.datetime.now(tz=tz)
-        listof =list(db.ticketsdb.find({}))
+        listof =await db.ticketsdb.find({}).to_list(length=None)
     
         for channeldata in listof:
             channel = self.bot.get_channel(channeldata["channelid"])            
             if channel:
-                ivalue = db.timedb.find_one({"channelid":channel.id})
-                wpay =db.globalchecker.find_one({"channelid":channel.id})
+                ivalue = await db.timedb.find_one({"channelid":channel.id})
+                wpay =await db.globalchecker.find_one({"channelid":channel.id})
                 if  ivalue is None and wpay is None:
                     await bot_tasks.auto_close_process(self,channel,channeldata)
                     
@@ -63,18 +63,18 @@ class bot_tasks(commands.Cog):
                     wdt :datetime.datetime= wpay["datetime"].replace(tzinfo=tz)
                     seconds = abs((datetime_utc-wdt).total_seconds())
                     if seconds >=259200: #if its older than 4days
-                        db.globalchecker.delete_one({"channelid":channel.id})
+                        await db.globalchecker.delete_one({"channelid":channel.id})
                         
                         await channel.send(f"<@{self.bot.owner_id}> use donot_close if you dont wanna to delete or cl_ose")
                         await bot_tasks.auto_close_process(self,channel,channeldata)
                                                  
             else:   
-                db.ticketsdb.delete_one({"channelid":channeldata["channelid"]})
+                await db.ticketsdb.delete_one({"channelid":channeldata["channelid"]})
                                                              
                                                              
         
         dt = datetime_utc.replace(tzinfo=None)
-        timedbs = list(db.timedb.find({}))
+        timedbs = await db.timedb.find({}).to_list(length=None)
         
             
             
@@ -97,11 +97,11 @@ class bot_tasks(commands.Cog):
                             if msgs and len(msgs) != 0:
                                 msg = msgs[0]
                                 if "close" in msg.content or "donotclose" in msg.content:
-                                    db.timedb.delete_one({"channelid":channel_id})
+                                    await db.timedb.delete_one({"channelid":channel_id})
                                     cprint("donotclose","yellow")
                                     return 
-                        if db.globalchecker.find_one({"channelid":channel_id}) :
-                            db.timedb.delete_one({"channelid":channel_id})
+                        if await db.globalchecker.find_one({"channelid":channel_id}) :
+                            await db.timedb.delete_one({"channelid":channel_id})
                             cprint("global check","yellow")
                             return 
                         
@@ -114,7 +114,7 @@ class bot_tasks(commands.Cog):
                             if not channel:
                                 cprint("channel non","yellow")
                             
-                                db.timedb.delete_one({"channelid":channel_id})
+                                await db.timedb.delete_one({"channelid":channel_id})
                             else:
                                 print( f" auto close {channel.name} {guild.name}")
                                 await helpers.close_ticket(self,None,channel)
@@ -122,7 +122,7 @@ class bot_tasks(commands.Cog):
                                 
                         else:
                             cprint("guild non","yellow")
-                            db.timedb.delete_one({"channelid":channel_id})
+                            await db.timedb.delete_one({"channelid":channel_id})
                 else:
                     print(f"{dt.date()} < {datetimes.date()}")
                     
@@ -189,7 +189,7 @@ class bot_tasks(commands.Cog):
                     
             else:
                 
-                db.ticketsdb.delete_one({"channelid":channeldata["channelid"]})
+                await db.ticketsdb.delete_one({"channelid":channeldata["channelid"]})
                 await channel.delete()
 
 def setup(bot: Bot) -> None:

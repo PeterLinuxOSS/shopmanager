@@ -1,3 +1,4 @@
+import asyncio
 import io
 import re
 
@@ -98,12 +99,12 @@ class helpers(commands.Cog):
             deleter = self.bot.user
             
             send = channel.send
-        test = db.ticketsdb.find_one({"channelid":channel.id})
+        test = await db.ticketsdb.find_one({"channelid":channel.id})
         if test :
-            glcheck = db.globalchecker.find_one({"channelid":channel.id})
-            db.globalchecker.delete_one({"channelid":channel.id}) if glcheck else ... 
+            glcheck = await db.globalchecker.find_one({"channelid":channel.id})
+            await db.globalchecker.delete_one({"channelid":channel.id}) if glcheck else ... 
             if "type" in test and test["type"] == "tf2keys" and "status" not in test  or "type" in test and test["type"] == "tf2keys" and  "status" in  test and  test["status"] != "finished":
-                db.goodsdb.update_one({"guilds":channel.guild.id, "type":"tf2keys"},{'$inc': {"onhold":-int(test["amount_thing"])}})
+                await db.goodsdb.update_one({"guilds":channel.guild.id, "type":"tf2keys"},{'$inc': {"onhold":-int(test["amount_thing"])}})
             
             await send("deleteing in 5s")
             transcript = await chat_exporter.export(channel,limit=0)
@@ -125,7 +126,7 @@ class helpers(commands.Cog):
             await channel.delete(reason=f"{deleter} used /delete")
             
             
-            db.ticketsdb.delete_one({"channelid":channel.id})
+            await db.ticketsdb.delete_one({"channelid":channel.id})
                     
         else:
             await send("this channel is not in db" )          
@@ -140,7 +141,7 @@ class helpers(commands.Cog):
             else:
                 msg : nextcord.Message = await self.bot.wait_for('message', check=lambda message: message.channel == channel or type(message.channel) == nextcord.channel.DMChannel and message.author.id == user.id, timeout=timeout)
             
-        except Exception:
+        except asyncio.TimeoutError:
             
             
             embed=nextcord.Embed(title="error | Your Time ran out", description="Cancelled the Operation!", color=0xff0000)

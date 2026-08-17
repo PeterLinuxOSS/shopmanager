@@ -1,15 +1,15 @@
-from pymongo import MongoClient
+from motor.motor_asyncio import AsyncIOMotorClient
 
 import config
 
 # The shop's own database.
-cluster = MongoClient(config.MONGODB_URI)
+cluster = AsyncIOMotorClient(config.MONGODB_URI)
 
 # A second cluster belonging to the CommendBot deployment, shared so the shop
 # can sell commends against an existing CommendBot balance. Optional: without
 # COMMENDBOT_MONGODB_URI the CommendBot-backed collections are unavailable and
 # only the standalone shop features work.
-commendbot = MongoClient(config.COMMENDBOT_MONGODB_URI) if config.COMMENDBOT_MONGODB_URI else None
+commendbot = AsyncIOMotorClient(config.COMMENDBOT_MONGODB_URI) if config.COMMENDBOT_MONGODB_URI else None
 
 
 class db:

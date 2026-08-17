@@ -30,9 +30,9 @@ class headcategory(nextcord.ui.Select):
         guild = interaction.guild
         member = interaction.user
         print(self.values[0])
-        ticketscount = db.ticketsdb.count_documents({"userid":member.id,"guildid":guild.id})
+        ticketscount = await db.ticketsdb.count_documents({"userid":member.id,"guildid":guild.id})
         if ticketscount <= 3:
-            events = db.headcategorysdb.find_one({"guildid":interaction.guild_id, "headcategory":self.values[0]})
+            events = await db.headcategorysdb.find_one({"guildid":interaction.guild_id, "headcategory":self.values[0]})
             print(events)
             if  events is not None and "run" in events :
                 labe = events
@@ -41,7 +41,7 @@ class headcategory(nextcord.ui.Select):
                 overwrites = {guild.default_role: nextcord.PermissionOverwrite(read_messages=False)}
                 try:
                     channel  = await guild.create_text_channel(name=f'📂・c-{member.name}' ,category=other,overwrites=overwrites)
-                except Exception:
+                except nextcord.HTTPException:
                     await interaction.edit_original_message(content='In specific category is more than 50 tickets, please contact admin of server to delete some tickets.')
                 else:
                     await channel.edit(sync_permissions=True)
@@ -53,7 +53,7 @@ class headcategory(nextcord.ui.Select):
                     selectOption = []
                 
                 
-                    styles = db.embedstylesdb.find_one({"guildid":guild.id,"type":"submenu","headcategory":self.values[0]})
+                    styles = await db.embedstylesdb.find_one({"guildid":guild.id,"type":"submenu","headcategory":self.values[0]})
                     if "subcategory" in labe["run"]:
                                 
                                 subCategories = db.subcategoriesdb.find({"guildid":guild.id, "headcategory":self.values[0]})
@@ -68,7 +68,7 @@ class headcategory(nextcord.ui.Select):
                                     numbers = 0    
                                     
                                     
-                                    for  value_value in subCategories:
+                                    async for  value_value in subCategories:
                                         value_id = value_value["subcategory"]
                                         print(value_id) 
                                         
@@ -116,7 +116,7 @@ class headcategory(nextcord.ui.Select):
                     elif labe["run"] == "products":
                         
                         x = db.productsdb.find({"guildid":interaction.guild_id, "headcategory":self.values[0],"enabled":True})
-                        productsdbs = list(x)
+                        productsdbs = await x.to_list(length=None)
                         
                             
                         if len(productsdbs) != 0:
@@ -125,7 +125,7 @@ class headcategory(nextcord.ui.Select):
                             selectOption = []
                             numbers = 0
                             print(self.values[0])
-                            stylesdb = db.embedstylesdb.find_one({"guildid":interaction.guild_id, "type":"productsmenu","headcategory":self.values[0]})
+                            stylesdb = await db.embedstylesdb.find_one({"guildid":interaction.guild_id, "type":"productsmenu","headcategory":self.values[0]})
                             if stylesdb :
 
                                 
@@ -209,10 +209,10 @@ class headcategorycs(commands.Cog):
     
     
     async def refreshlables(self,guildid):
-        guildsettin = db.guildsdb.find_one({"guildid":guildid})
+        guildsettin = await db.guildsdb.find_one({"guildid":guildid})
         if guildsettin is not None:
         
-            stylesdb =db.embedstylesdb.find_one({"guildid":guildid, "type":"headmenu"})
+            stylesdb =await db.embedstylesdb.find_one({"guildid":guildid, "type":"headmenu"})
             if stylesdb :
                 
                 
@@ -235,7 +235,7 @@ class headcategorycs(commands.Cog):
                                     description = f"{stylesdb['description']}\n\n"
                                 else:
                                     description = ""
-                                for value_value in menu:
+                                async for value_value in menu:
                                     
                                     
                                     
@@ -299,7 +299,7 @@ class headcategorycs(commands.Cog):
                                     description = f"{stylesdb['description']}\n\n"
                                 else:
                                     description = ""
-                                for value_value in menu:
+                                async for value_value in menu:
                                     
                                     
                                     
@@ -352,7 +352,7 @@ class headcategorycs(commands.Cog):
                                 cprint(f"Refreshed for {channel.guild.name}","green")
                             else:
                                 msg = await channel.send(content="Use `/setup > Setup-Head-Category`  to setup category/s")
-                            db.embedstylesdb.update_one({"_id":stylesdb["_id"]},{'$set': {'msgid': msg.id}})
+                            await db.embedstylesdb.update_one({"_id":stylesdb["_id"]},{'$set': {'msgid': msg.id}})
 
     
 
