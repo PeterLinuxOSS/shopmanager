@@ -270,7 +270,7 @@ class setupsubcategory2(nextcord.ui.Select):
                     embed.set_footer(text=interaction.guild , icon_url=interaction.guild.icon.url)
                 await interaction.channel.send(embed=embed)
         elif int(value) == 2:
-            await interaction.channel.send("Peter is too lazy to add this function so ll be available soon xd, if u want smth change pls contact the [STT_Esports] PeterLinuxOS#5964 (<@640961296665149440>) ")
+            await interaction.channel.send(f"This feature isn't available yet. If you need it, please contact <@{config.OWNER_ID}>.")
                         
         elif int(value) == 3:
             event2 = await db.subcategoriesdb.find_one({"guildid":interaction.guild_id , "headcategory":f"category{hcategory}", "subcategory":f"subcategory{scategory}"})
@@ -940,7 +940,7 @@ class goodsadd(nextcord.ui.Select):
                     await self.bot.get_cog("setup_settings").commendbotsetup(interaction,slots)
                     
                 elif len(balsdb) == 0:    
-                    embed = nextcord.Embed(title="Alert ", description="You dont have any balance in <@937729933571149847>", color=Colour.red(), timestamp=timestamp,)
+                    embed = nextcord.Embed(title="Alert ", description=f"You dont have any balance in <@{config.COMMENDBOT_BOT_ID_BALANCE_ALERT}>", color=Colour.red(), timestamp=timestamp,)
                     await interaction.send(embed=embed)
                     
                 else:

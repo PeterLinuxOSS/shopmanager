@@ -630,7 +630,7 @@ class order(commands.Cog):
             else:
                 if "gifted" in msg.content:
                 
-                    embed = nextcord.Embed(title="success", description=f"Your {amount} commends has been gifted!(use /balance in this channel or in <@1134090688200462396> dms)", color=Colour.brand_green(), timestamp=timestamp,)
+                    embed = nextcord.Embed(title="success", description=f"Your {amount} commends has been gifted!(use /balance in this channel or in <@{config.COMMENDBOT_BOT_ID_GIFT_NOTICE}> dms)", color=Colour.brand_green(), timestamp=timestamp,)
                     await channel.send(embed=embed)
                 elif "blacklist-g" in msg.content: 
                     embed = nextcord.Embed(title="Blacklist Error", description=f"Gifter <@{gooddb['userid']}> is blacklisted in commendbot!", color=Colour.dark_blue(), timestamp=timestamp,)

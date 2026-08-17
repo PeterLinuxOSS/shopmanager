@@ -161,6 +161,23 @@ RANK_LABELS: dict[int, str] = {
     18: "The Global Elite",
 }
 
+# Category-number select options above 10 (1-10 use the standard Discord
+# keycap emoji inline, which need no configuration).
+CATEGORY_NUMBER_EMOJIS: dict[int, str] = {
+    11: _str("CATEGORY_EMOJI_11", "<:11:966440104564490330>"),
+    12: _str("CATEGORY_EMOJI_12", "<:12:966440605024681994>"),
+    13: _str("CATEGORY_EMOJI_13", "<:13:966440815977189376>"),
+    14: _str("CATEGORY_EMOJI_14", "<:14:966440948680773643>"),
+    15: _str("CATEGORY_EMOJI_15", "<:15:966441081271091340>"),
+}
+
+# Discord user ID of the CommendBot bot account, mentioned so a customer knows
+# where to check a shared balance. The original source referenced two
+# different snowflakes for what reads as the same purpose in two messages;
+# preserved as two separate settings rather than assumed to be one account.
+COMMENDBOT_BOT_ID_GIFT_NOTICE = _int("COMMENDBOT_BOT_ID_GIFT_NOTICE", 1134090688200462396)
+COMMENDBOT_BOT_ID_BALANCE_ALERT = _int("COMMENDBOT_BOT_ID_BALANCE_ALERT", 937729933571149847)
+
 
 # --------------------------------------------------------------------------
 # Images

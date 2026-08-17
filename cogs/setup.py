@@ -95,11 +95,11 @@ class setup_settings(commands.Cog):
                 "08":nextcord.SelectOption(label="Category", emoji="8️⃣" ,value="08"),
                 "09":nextcord.SelectOption(label="Category", emoji="9️⃣" ,value="09"),
                 "10":nextcord.SelectOption(label="Category", emoji="🔟" ,value="10"),
-                "11":nextcord.SelectOption(label="Category", emoji="<:11:966440104564490330>" ,value="11"),
-                "12":nextcord.SelectOption(label="Category", emoji="<:12:966440605024681994>" ,value="12"),
-                "13":nextcord.SelectOption(label="Category", emoji="<:13:966440815977189376>" ,value="13"),
-                "14":nextcord.SelectOption(label="Category", emoji="<:14:966440948680773643>" ,value="14"),
-                "15":nextcord.SelectOption(label="Category", emoji="<:15:966441081271091340>" ,value="15"),
+                "11":nextcord.SelectOption(label="Category", emoji=config.CATEGORY_NUMBER_EMOJIS[11] ,value="11"),
+                "12":nextcord.SelectOption(label="Category", emoji=config.CATEGORY_NUMBER_EMOJIS[12] ,value="12"),
+                "13":nextcord.SelectOption(label="Category", emoji=config.CATEGORY_NUMBER_EMOJIS[13] ,value="13"),
+                "14":nextcord.SelectOption(label="Category", emoji=config.CATEGORY_NUMBER_EMOJIS[14] ,value="14"),
+                "15":nextcord.SelectOption(label="Category", emoji=config.CATEGORY_NUMBER_EMOJIS[15] ,value="15"),
 
         }
         for tab in listnumbers:
