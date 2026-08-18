@@ -1,0 +1,60 @@
+# CI for this archive: compiles, lints, loads every cog into a real Bot, and
+# drives the motor DB layer against a real MongoDB.
+#
+# Unlike commendbot's equivalent workflow, no replica set is needed here -
+# ShopManager doesn't use change streams, so a standalone mongod is enough.
+
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand(\"ping\")'"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install ruff
+
+      - name: Compile check
+        run: python -m compileall -q .
+
+      - name: Lint (undefined names, bad star-imports, syntax)
+        run: ruff check --select F821,F403,F405,E9 .
+
+      - name: Load every cog into a real Bot
+        env:
+          DISCORD_TOKEN: dummy
+          MONGODB_URI: "mongodb://127.0.0.1:1/shopmanager_ci?directConnection=true&serverSelectionTimeoutMS=200"
+        run: python3 tools/load_check.py
+
+      - name: Exercise the motor DB layer and pure helpers
+        env:
+          DISCORD_TOKEN: dummy
+          MONGODB_URI: "mongodb://127.0.0.1:27017/shopmanager_ci?directConnection=true"
+        run: python3 tools/exercise_db.py

@@ -99,9 +99,8 @@ serve as documentation; point them at your own guild before running.
 Two scripts under `tools/` validate the bot without a full deployment:
 
 - `tools/load_check.py` — loads all 12 cogs into a real nextcord Bot and
-  reports the command surface. Catches import-time errors a plain
-  `compileall` cannot, because it actually registers cogs the way `main.py`
-  does at startup.
+  reports the command surface. Needs no live infrastructure: motor connects
+  lazily, so MongoDB never has to be reachable just to import the cogs.
 - `tools/exercise_db.py` — runs real insert/find/update/delete round trips
   against MongoDB through `utils.mongodb`, including the specific
   if/else-into-one-shared-loop cursor pattern used in `cogs/setup.py` (two
@@ -110,9 +109,14 @@ Two scripts under `tools/` validate the bot without a full deployment:
   `utils/variables.py`.
 
 ```bash
-MONGODB_URI='mongodb://127.0.0.1:27017/?directConnection=true' python3 tools/load_check.py
+python3 tools/load_check.py
 MONGODB_URI='mongodb://127.0.0.1:27017/shopmanager_test?directConnection=true' python3 tools/exercise_db.py
 ```
+
+CI (`.github/workflows/python-package.yml`) runs both on every push — compile
+check, lint, `load_check.py`, then `exercise_db.py` against a standalone
+MongoDB service container (no replica set needed here, unlike CommendBot's
+workflow — ShopManager doesn't use change streams).
 
 Neither exercises interactive flows (select menus, modals, button callbacks)
 — those only run against a live Discord interaction, and remain unverified

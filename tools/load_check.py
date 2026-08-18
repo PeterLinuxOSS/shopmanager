@@ -11,8 +11,10 @@ callbacks) — those only run against a live Discord interaction. See
 tools/exercise_db.py for a runtime check of the database layer, and
 README.md's "Known rough edges" for what remains unverified.
 
-    MONGODB_URI='mongodb://127.0.0.1:27017/?directConnection=true' \
-        python3 tools/load_check.py
+Needs no live infrastructure: motor connects lazily, so MongoDB never has to
+be reachable just to import the cogs and register their commands.
+
+    python3 tools/load_check.py
 """
 
 import os
@@ -20,7 +22,7 @@ import sys
 import traceback
 from pathlib import Path
 
-os.environ.setdefault("MONGODB_URI", "mongodb://127.0.0.1:27017/shopmanager_loadcheck?directConnection=true")
+os.environ.setdefault("MONGODB_URI", "mongodb://127.0.0.1:1/?directConnection=true&serverSelectionTimeoutMS=200")
 os.environ.setdefault("DISCORD_TOKEN", "dummy")
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 os.chdir(Path(__file__).resolve().parents[1])
