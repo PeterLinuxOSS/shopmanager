@@ -1,12 +1,12 @@
 # shopmanager
 
-Predajný a objednávkový **Discord bot** — správa objednávok, licenčných kľúčov a zákazníkov (cogs: orders, keys, ...). Napojenie na MongoDB.
+Discord sales & order bot — manages orders, license keys and customers (cogs: `orders`, `keys`, …), backed by MongoDB.
 
-## Rodina CommendBot
-- **commendbot** — jadro bota (commend logika)
-- **commendbot-panel** — serverový ovládací panel (spúšťa a riadi klientov)
-- **commendbot-client** — klientský agent bežiaci na stroji (ovláda Steam/CS2)
-- **commendbot-slots** — slotový systém inštancií
-- **shopmanager** — predajný/objednávkový Discord bot (kľúče, licencie)
+## CommendBot family
+- **commendbot** — core bot (commend logic)
+- **commendbot-panel** — server-side control panel (dispatches & manages clients)
+- **commendbot-client** — client agent running on the machine (drives Steam/CS2)
+- **commendbot-slots** — slot-based instance manager
+- **shopmanager** — Discord sales/order bot (keys, licenses)
 
-_Súčasť ekosystému služby gameboosting._
+_Part of the gameboosting service ecosystem._
